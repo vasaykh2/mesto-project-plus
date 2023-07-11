@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
-import User from '../models/user';
-import HttpStatusCode from '../types/HttpStatusCode';
-import { ErrorMessage } from '../types/ErrorMessage';
-import { RequestCustom } from '../types';
+import { Request, Response } from "express";
+import User from "../models/user";
+import HttpStatusCode from "../types/HttpStatusCode";
+import { ErrorMessage } from "../types/ErrorMessage";
+import { RequestCustom } from "../types";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -27,9 +27,7 @@ export const getUser = async (req: Request, res: Response) => {
     return res.status(HttpStatusCode.OK).send(user);
   } catch (e) {
     if (e instanceof Error && e.message === ErrorMessage.USER_NOT_FOUND) {
-      return res
-        .status(HttpStatusCode.NOT_FOUND)
-        .send({ message: e.message });
+      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
     }
 
     return res
@@ -40,12 +38,6 @@ export const getUser = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { name, about, avatar } = req.body;
-
-    if (!name || !about || !avatar) {
-      throw new Error(ErrorMessage.INVALID_DATA);
-    }
-
     const newUser = await User.create(req.body);
     return res.status(HttpStatusCode.CREATED).send(newUser);
   } catch (e) {
@@ -69,7 +61,9 @@ export const patchUser = async (req: RequestCustom, res: Response) => {
       throw new Error(ErrorMessage.INVALID_DATA);
     }
 
-    const patchedUser = await User.findByIdAndUpdate(req.user?._id, req.body, { new: true });
+    const patchedUser = await User.findByIdAndUpdate(req.user?._id, req.body, {
+      new: true,
+    });
 
     if (!patchedUser) {
       throw new Error(ErrorMessage.USER_NOT_FOUND);
@@ -78,9 +72,7 @@ export const patchUser = async (req: RequestCustom, res: Response) => {
     return res.status(HttpStatusCode.OK).send(patchedUser);
   } catch (e) {
     if (e instanceof Error && e.message === ErrorMessage.INVALID_DATA) {
-      return res
-        .status(HttpStatusCode.NOT_FOUND)
-        .send({ message: e.message });
+      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
     }
 
     return res
@@ -97,7 +89,9 @@ export const patchAvatar = async (req: RequestCustom, res: Response) => {
       throw new Error(ErrorMessage.INVALID_DATA);
     }
 
-    const patchedUser = await User.findByIdAndUpdate(req.user?._id, req.body, { new: true });
+    const patchedUser = await User.findByIdAndUpdate(req.user?._id, req.body, {
+      new: true,
+    });
 
     if (!patchedUser) {
       throw new Error(ErrorMessage.USER_NOT_FOUND);
@@ -106,9 +100,7 @@ export const patchAvatar = async (req: RequestCustom, res: Response) => {
     return res.status(HttpStatusCode.OK).send(patchedUser);
   } catch (e) {
     if (e instanceof Error && e.message === ErrorMessage.INVALID_DATA) {
-      return res
-        .status(HttpStatusCode.NOT_FOUND)
-        .send({ message: e.message });
+      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
     }
 
     return res

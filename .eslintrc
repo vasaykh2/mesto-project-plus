@@ -7,8 +7,12 @@
     "airbnb-base"
   ],
   "parser": "@typescript-eslint/parser",
+
+  ignorePatterns: ['.eslintrc.js'],
+
   "parserOptions": {
     "ecmaVersion": "latest",
+    tsconfigRootDir: __dirname,
     "sourceType": "module"
   },
   "plugins": [

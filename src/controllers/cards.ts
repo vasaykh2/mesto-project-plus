@@ -19,10 +19,6 @@ export const createCard = async (req: RequestCustom, res: Response) => {
   try {
     const { name, link } = req.body;
 
-    if (!name || !link) {
-      throw new Error(ErrorMessage.INVALID_DATA);
-    }
-
     const newCard = await Card.create({ name, link, owner: req.user?._id });
     return res.status(HttpStatusCode.CREATED).send(newCard);
   } catch (e) {

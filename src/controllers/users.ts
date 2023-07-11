@@ -1,8 +1,8 @@
-import { Request, Response } from "express";
-import User from "../models/user";
-import HttpStatusCode from "../types/HttpStatusCode";
-import { ErrorMessage } from "../types/ErrorMessage";
-import { RequestCustom } from "../types";
+import { Request, Response } from 'express';
+import User from '../models/user';
+import HttpStatusCode from '../types/HttpStatusCode';
+import { ErrorMessage } from '../types/ErrorMessage';
+import { RequestCustom } from '../types';
 
 export const getUsers = async (req: Request, res: Response) => {
   try {

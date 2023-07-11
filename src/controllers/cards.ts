@@ -51,7 +51,7 @@ export const deleteCard = async (req: RequestCustom, res: Response) => {
       throw new Error(ErrorMessage.CARD_NOT_FOUND);
     }
     return res.status(HttpStatusCode.OK).send(deletedCard);
-    //console.log(deleteCard);
+    // console.log(deleteCard);
   } catch (e) {
     if (
       e instanceof Error

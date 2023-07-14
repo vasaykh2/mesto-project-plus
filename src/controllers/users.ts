@@ -1,110 +1,94 @@
-import { Request, Response } from 'express';
-import User from '../models/user';
+import { NextFunction, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { UpdateQuery } from 'mongoose';
+import User, { IUser } from '../models/user';
 import HttpStatusCode from '../types/HttpStatusCode';
-import { ErrorMessage } from '../types/ErrorMessage';
 import { RequestCustom } from '../types';
+import { SEVEN_DAYS } from '../utils/constants';
 
-export const getUsers = async (req: Request, res: Response) => {
+export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const users = await User.find({});
     return res.status(HttpStatusCode.OK).send(users);
-  } catch (e) {
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+  } catch (err) {
+    return next(err);
   }
 };
 
-export const getUser = async (req: Request, res: Response) => {
+export const getUser = async (req: RequestCustom, res: Response, next: NextFunction) => {
   try {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw new Error(ErrorMessage.USER_NOT_FOUND);
-    }
+    const userId = req.params.userId ? req.params.userId : req.user?._id;
+    const user = await User.findById(userId).orFail();
 
     return res.status(HttpStatusCode.OK).send(user);
-  } catch (e) {
-    if (e instanceof Error && e.message === ErrorMessage.USER_NOT_FOUND) {
-      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
-    }
-
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+  } catch (err) {
+    return next(err);
   }
 };
 
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const newUser = await User.create(req.body);
-    return res.status(HttpStatusCode.CREATED).send(newUser);
-  } catch (e) {
-    if (e instanceof Error && e.message === ErrorMessage.INVALID_DATA) {
-      return res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .send({ message: e.message });
-    }
+    const {
+      name, about, avatar, email, password,
+    } = req.body;
 
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
-  }
-};
+    const hash = await bcrypt.hash(password, 10);
 
-export const patchUser = async (req: RequestCustom, res: Response) => {
-  try {
-    const { name, about } = req.body;
-
-    if (!name || !about) {
-      throw new Error(ErrorMessage.INVALID_DATA);
-    }
-
-    const patchedUser = await User.findByIdAndUpdate(req.user?._id, req.body, {
-      new: true,
+    const newUser = await User.create({
+      name, about, avatar, email, password: hash,
     });
 
-    if (!patchedUser) {
-      throw new Error(ErrorMessage.USER_NOT_FOUND);
-    }
+    const resBody = newUser.toObject();
+    delete resBody.password;
 
-    return res.status(HttpStatusCode.OK).send(patchedUser);
-  } catch (e) {
-    if (e instanceof Error && e.message === ErrorMessage.INVALID_DATA) {
-      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
-    }
-
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+    return res.status(HttpStatusCode.CREATED).send(resBody);
+  } catch (err) {
+    return next(err);
   }
 };
 
-export const patchAvatar = async (req: RequestCustom, res: Response) => {
+export const patchUser = async (
+  req: RequestCustom,
+  res: Response,
+  next: NextFunction,
+  info: UpdateQuery<IUser>,
+) => {
   try {
-    const { avatar } = req.body;
-
-    if (!avatar) {
-      throw new Error(ErrorMessage.INVALID_DATA);
-    }
-
-    const patchedUser = await User.findByIdAndUpdate(req.user?._id, req.body, {
-      new: true,
-    });
-
-    if (!patchedUser) {
-      throw new Error(ErrorMessage.USER_NOT_FOUND);
-    }
+    const patchedUser = await User.findByIdAndUpdate(
+      req.user?._id,
+      info,
+      { new: true, runValidators: true },
+    ).orFail();
 
     return res.status(HttpStatusCode.OK).send(patchedUser);
-  } catch (e) {
-    if (e instanceof Error && e.message === ErrorMessage.INVALID_DATA) {
-      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
-    }
+  } catch (err) {
+    return next(err);
+  }
+};
 
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+export const patchUserInfo = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  const { name, about } = req.body;
+  await patchUser(req, res, next, { name, about });
+};
+
+export const patchUserAvatar = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  const { avatar } = req.body;
+  await patchUser(req, res, next, { avatar });
+};
+
+export const login = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findUserByCredentials(email, password);
+    const { NODE_ENV, JWT_KEY } = process.env;
+    const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_KEY as string : 'dev-secret');
+
+    return res.status(HttpStatusCode.OK).cookie('jwt', token, {
+      maxAge: SEVEN_DAYS,
+      httpOnly: true,
+    }).end();
+  } catch (err) {
+    return next(err);
   }
 };

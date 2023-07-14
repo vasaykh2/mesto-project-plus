@@ -1,132 +1,69 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import Card from '../models/card';
 import HttpStatusCode from '../types/HttpStatusCode';
-import { ErrorMessage } from '../types/ErrorMessage';
 import { RequestCustom } from '../types';
+import ErrorMessage from '../types/ErrorMessage';
+import UnauthorizedError from '../errors/UnauthorizedError';
 
-export const getCards = async (req: Request, res: Response) => {
+export const getCards = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const cards = await Card.find({});
+    const cards = await Card.find({}).populate(['owner', 'likes']);
+
     return res.status(HttpStatusCode.OK).send(cards);
-  } catch (e) {
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+  } catch (err) {
+    return next(err);
   }
 };
 
-export const createCard = async (req: RequestCustom, res: Response) => {
+export const createCard = async (req: RequestCustom, res: Response, next: NextFunction) => {
   try {
     const { name, link } = req.body;
+    const newCard = await Card.create(
+      { name, link, owner: req.user?._id },
+    );
 
-    const newCard = await Card.create({ name, link, owner: req.user?._id });
     return res.status(HttpStatusCode.CREATED).send(newCard);
-  } catch (e) {
-    if (e instanceof Error && e.message === ErrorMessage.INVALID_DATA) {
-      return res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .send({ message: e.message });
-    }
-
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+  } catch (err) {
+    return next(err);
   }
 };
 
-export const deleteCard = async (req: RequestCustom, res: Response) => {
+export const deleteCard = async (req: RequestCustom, res: Response, next: NextFunction) => {
   try {
     const { cardId } = req.params;
 
-    if (!cardId) {
-      throw new Error(ErrorMessage.INVALID_DATA);
+    const cardToDelete = await Card.findById(cardId).orFail();
+
+    if (cardToDelete.owner.toString() !== req.user?._id) {
+      throw new UnauthorizedError(ErrorMessage.ACCESS_DENIED);
     }
 
-    const deletedCard = await Card.findByIdAndDelete(cardId);
-    if (!deletedCard) {
-      throw new Error(ErrorMessage.CARD_NOT_FOUND);
-    }
+    const deletedCard = await cardToDelete.deleteOne();
+
     return res.status(HttpStatusCode.OK).send(deletedCard);
-    // console.log(deleteCard);
-  } catch (e) {
-    if (
-      e instanceof Error
-      && (e.message === ErrorMessage.INVALID_DATA
-        || e.message === ErrorMessage.CARD_NOT_FOUND)
-    ) {
-      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
-    }
-
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+  } catch (err) {
+    return next(err);
   }
 };
 
-export const likeCard = async (req: RequestCustom, res: Response) => {
+export const updateCardLikes = async (req: RequestCustom, res: Response, next: NextFunction, updateParam: 'add' | 'pull') => {
   try {
     const { cardId } = req.params;
-
-    if (!cardId) {
-      throw new Error(ErrorMessage.INVALID_DATA);
-    }
 
     const likedCard = await Card.findByIdAndUpdate(
       cardId,
-      { $addToSet: { likes: req.user?._id } },
+      updateParam === 'add'
+        ? { $addToSet: { likes: req.user?._id } }
+        : { $pull: { likes: req.user?._id } as any },
       { new: true },
-    );
-
-    if (!likedCard) {
-      throw new Error(ErrorMessage.CARD_NOT_FOUND);
-    }
+    ).orFail();
 
     return res.status(HttpStatusCode.OK).send(likedCard);
-  } catch (e) {
-    if (
-      e instanceof Error
-      && (e.message === ErrorMessage.INVALID_DATA
-        || e.message === ErrorMessage.CARD_NOT_FOUND)
-    ) {
-      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
-    }
-
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
+  } catch (err) {
+    return next(err);
   }
 };
 
-export const dislikeCard = async (req: RequestCustom, res: Response) => {
-  try {
-    const { cardId } = req.params;
+export const likeCard = async (req: RequestCustom, res: Response, next: NextFunction) => updateCardLikes(req, res, next, 'add');
 
-    if (!cardId) {
-      throw new Error(ErrorMessage.INVALID_DATA);
-    }
-
-    const dislikedCard = await Card.findByIdAndUpdate(
-      cardId,
-      { $pull: { likes: req.user?._id } as any },
-      { new: true },
-    );
-
-    if (!dislikedCard) {
-      throw new Error(ErrorMessage.CARD_NOT_FOUND);
-    }
-
-    return res.status(HttpStatusCode.OK).send(dislikedCard);
-  } catch (e) {
-    if (
-      e instanceof Error
-      && (e.message === ErrorMessage.INVALID_DATA
-        || e.message === ErrorMessage.CARD_NOT_FOUND)
-    ) {
-      return res.status(HttpStatusCode.NOT_FOUND).send({ message: e.message });
-    }
-
-    return res
-      .status(HttpStatusCode.INTERNAL_SERVER_ERROR)
-      .send({ message: ErrorMessage.INTERNAL_SERVER_ERROR });
-  }
-};
+export const dislikeCard = async (req: RequestCustom, res: Response, next: NextFunction) => updateCardLikes(req, res, next, 'pull');

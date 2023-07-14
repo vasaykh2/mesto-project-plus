@@ -1,9 +1,15 @@
 /* eslint-disable no-shadow,no-unused-vars */
 
-// eslint-disable-next-line import/prefer-default-export
-export enum ErrorMessage {
+enum ErrorMessage {
   INTERNAL_SERVER_ERROR = 'Ошибка на стороне сервера',
-  USER_NOT_FOUND = 'Пользователь не найден',
   INVALID_DATA = 'Переданы некорректные данные',
-  CARD_NOT_FOUND = 'Карточка не найдена',
+  PAGE_NOT_FOUND = 'Страница не найдена',
+  DATA_NOT_FOUND = 'Данные не найдены',
+  INVALID_EMAIL_OR_PASSWORD = 'Неправильные почта или пароль',
+  NO_AUTH = 'Необходима авторизация',
+  ACCESS_DENIED = 'Нет прав доступа',
+  NOT_UNIQUE_EMAIL = 'Пользователь с данным емэйл уже зарегистрирован',
+  INCORRECT_ID = 'Некорректный ID',
 }
+
+export default ErrorMessage;

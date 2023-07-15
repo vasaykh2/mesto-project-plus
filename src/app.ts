@@ -10,7 +10,7 @@ import rootRouter from './routes/root';
 
 require('dotenv').config();
 
-const { PORT = 3000 } = process.env;
+const { PORT = 3000, DB_CONNECTION = 'mongodb://localhost:27017/mestodb' } = process.env;
 
 const app = express();
 
@@ -30,7 +30,7 @@ app.use(errorLogger);
 app.use(errors());
 app.use(errorHandler);
 
-mongoose.connect('mongodb://localhost:27017/mestodb');
+mongoose.connect(DB_CONNECTION);
 
 app.listen(PORT, () => {
   console.log('Server listening on port', PORT);

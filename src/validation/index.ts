@@ -3,17 +3,6 @@ import { isObjectIdOrHexString } from 'mongoose';
 import ErrorMessage from '../types/ErrorMessage';
 import { validLinkRegexp } from '../utils/constants';
 
-export const getUserValidation = celebrate({
-  params: Joi.object().keys({
-    userId: Joi.string().required().custom((value) => {
-      if (!isObjectIdOrHexString(value)) {
-        throw new Error(ErrorMessage.INCORRECT_ID);
-      }
-      return value;
-    }),
-  }),
-});
-
 export const idValidation = (id: string) => celebrate({
   params: Joi.object().keys({
     [id]: Joi.string().required().custom((value) => {

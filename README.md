@@ -55,7 +55,3 @@ bcryptjs
 Модуль validator
 JWT from 'jsonwebtoken'
 Celebrate
-
-
-
-* [Ссылка на " Бэкенд Mesto" в GitHub Pages]( https://github.com/vasaykh2/mesto-project-plus)
